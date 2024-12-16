@@ -1,21 +1,62 @@
-use std::{fmt::Display, fs::File, io::{BufReader, Read}};
+use std::{fmt::Display, fmt::Debug, fs::File, io::{BufReader, Read}, ops::{Deref, DerefMut}};
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum BoardCell {
     Empty,
     Box,
     Wall,
     Robot,
 }
+
+struct Board(Vec<Vec<BoardCell>>);
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for row in self.0.iter() {
+            for cell in row {
+                write!(f, "{cell}")?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
+impl Debug for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self, f)
+    }
+}
+
+impl Deref for Board {
+    type Target = Vec<Vec<BoardCell>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Board {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl Display for BoardCell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!("Make this print its input symbol for debugging.");
+        let c = match self {
+            BoardCell::Empty => '.',
+            BoardCell::Box => 'O',
+            BoardCell::Wall => '#',
+            BoardCell::Robot => '@',
+        };
+        write!(f, "{}", c)
     }
 }
 
 // All locations are in y, x form.
 
-fn find_robot(board: &Vec<Vec<BoardCell>>) -> (usize, usize) {
+fn find_robot(board: &Board) -> (usize, usize) {
     for (row_num, row) in board.iter().enumerate() {
         for (col_num, board_cell) in row.iter().enumerate() {
             if *board_cell == BoardCell::Robot {
@@ -26,13 +67,25 @@ fn find_robot(board: &Vec<Vec<BoardCell>>) -> (usize, usize) {
     unreachable!()
 }
 
-fn make_move(board: &mut Vec<Vec<BoardCell>>, move_: u8) {
-    let (robot_x, robot_y) = find_robot(board);
+fn gps_sum(board: &Board) -> u64 {
+    let mut sum = 0;
+    for (row_num, row) in board.iter().enumerate() {
+        for (col_num, cell) in row.iter().enumerate() {
+            if *cell == BoardCell::Box {
+                sum += 100 * row_num + col_num;
+            }
+        }
+    }
+    sum as u64
+}
+
+fn make_move(board: &mut Board, move_: char) {
+    let (robot_y, robot_x) = find_robot(board);
     let direction = match move_ {
-        b'<' => (0, -1),
-        b'>' => (0, 1),
-        b'^' => (-1, 0),
-        b'v' => (1, 0),
+        '<' => (0, -1),
+        '>' => (0, 1),
+        '^' => (-1, 0),
+        'v' => (1, 0),
         _ => panic!("Invalid direction"),
     };
 
@@ -50,12 +103,13 @@ fn make_move(board: &mut Vec<Vec<BoardCell>>, move_: u8) {
 
     while current_cell == BoardCell::Box {
         current_y = (current_y as isize + direction.0) as usize;
-        current_x += (current_x as isize + direction.1) as usize;
+        current_x = (current_x as isize + direction.1) as usize;
         current_cell = board[current_y][current_x];
     }
 
     match current_cell {
         BoardCell::Empty => {
+            board[robot_y][robot_x] = BoardCell::Empty;
             // Move the boxes.
             board[current_y][current_x] = BoardCell::Box;
             board[in_front_of_robot_y][in_front_of_robot_x] = BoardCell::Robot;
@@ -75,7 +129,7 @@ fn make_move(board: &mut Vec<Vec<BoardCell>>, move_: u8) {
 }
 
 fn main() {
-    let mut input_file = BufReader::new(File::open("simple_test_input.txt").unwrap());
+    let mut input_file = BufReader::new(File::open("input.txt").unwrap());
     let mut input_string = String::new();
     input_file.read_to_string(&mut input_string).unwrap();
 
@@ -99,13 +153,20 @@ fn main() {
         board.push(new_board_line);
     }
 
-    dbg!(&board);
-    dbg!(find_robot(&mut board));
+    let mut board = Board(board);
 
-    for &curr_move in moves_string.as_bytes() {
+    dbg!(&board);
+    dbg!(find_robot(&board));
+
+    for curr_move in moves_string.chars() {
+        if curr_move == '\n' {
+            continue;
+        }
         make_move(&mut board, curr_move);
-        println!("Board: {:?}", &board);
+        // println!("{:?}", &board);
     }
+
+    println!("Final GPS Sum is: {}", gps_sum(&board));
 
 
 }
