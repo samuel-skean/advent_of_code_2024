@@ -88,10 +88,7 @@ fn gps_sum(board: &Board) -> u64 {
     sum as u64
 }
 
-fn add_vector(
-    (y_pos, x_pos): (usize, usize),
-    (y_dir, x_dir): (isize, isize),
-) -> (usize, usize) {
+fn add_vector((y_pos, x_pos): (usize, usize), (y_dir, x_dir): (isize, isize)) -> (usize, usize) {
     (
         (y_pos as isize + y_dir) as usize,
         (x_pos as isize + x_dir) as usize,
@@ -108,29 +105,29 @@ fn find_box_half_positions(board: &Board, (y, x): (usize, usize)) -> [(usize, us
     }
 }
 
-fn find_push_targets(board: &Board, box_half_position: (usize, usize), direction: (isize, isize)) -> Box<[(usize, usize)]> {
+fn find_push_targets(
+    board: &Board,
+    box_half_position: (usize, usize),
+    direction: (isize, isize),
+) -> Box<[(usize, usize)]> {
     let [left_box_position, right_box_position] = find_box_half_positions(board, box_half_position);
     match direction.1 {
-        0 => Box::new([add_vector(left_box_position, direction), add_vector(right_box_position, direction)]),
+        0 => Box::new([
+            add_vector(left_box_position, direction),
+            add_vector(right_box_position, direction),
+        ]),
         1 => Box::new([add_vector(right_box_position, direction)]),
         -1 => Box::new([add_vector(left_box_position, direction)]),
-        _ => panic!("Unsupported horizontal direction.")
+        _ => panic!("Unsupported horizontal direction."),
     }
 }
 
 fn is_pushable(board: &Board, position: (usize, usize), direction: (isize, isize)) -> bool {
     match board[position.0][position.1] {
         BoardCell::Empty => true,
-        BoardCell::BoxLeft | BoardCell::BoxRight => {
-            
-            find_push_targets(board, position, direction).iter().all(|target_position| {
-                is_pushable(
-                    board,
-                    *target_position,
-                    direction,
-                )
-            })
-        }
+        BoardCell::BoxLeft | BoardCell::BoxRight => find_push_targets(board, position, direction)
+            .iter()
+            .all(|target_position| is_pushable(board, *target_position, direction)),
         BoardCell::Wall => false,
         BoardCell::Robot => panic!("Another robot?!"),
     }
@@ -156,10 +153,9 @@ fn push(board: &mut Board, position: (usize, usize), direction: (isize, isize)) 
             board[new_box_left_y][new_box_left_x] = BoardCell::BoxLeft;
             let (new_box_right_y, new_box_right_x) = add_vector(box_right_position, direction);
             board[new_box_right_y][new_box_right_x] = BoardCell::BoxRight;
-        },
+        }
         _ => panic!("Not pushable!"),
     }
-    
 }
 
 fn make_move(board: &mut Board, move_: char) {
