@@ -180,7 +180,7 @@ fn make_move(board: &mut Board, move_: char) {
 }
 
 fn main() {
-    let mut input_file = BufReader::new(File::open("input-part_2.txt").unwrap());
+    let mut input_file = BufReader::new(File::open("my_simple_part_2_test.txt").unwrap());
     let mut input_string = String::new();
     input_file.read_to_string(&mut input_string).unwrap();
 
@@ -216,7 +216,7 @@ fn main() {
             continue;
         }
         make_move(&mut board, curr_move);
-        // println!("{:?}", &board);
+        println!("{:?}", &board);
     }
 
     println!("Final GPS Sum is: {}", gps_sum(&board));
